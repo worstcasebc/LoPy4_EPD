@@ -27,4 +27,4 @@ Adafruit framebuf and Waveshare Python-libs adapted for Micropython
 
 ### Code
 The Lopy4 board connects to a WiFi first. This happens in the boot.py, that is called first after a start/reboot. You need to provide a SSID and the key for that WiFi within config.py. After WiFi is connected, the actual time is requested and stored to the RTC of the board.
-
+All settings for WiFi and for the used e-paper display is done within the config.py. In case of the Waveshare 7.5 inch yellow/red display (epd7in5bc) you can choose an option not to use the color-layer, but only b&w. Also the orientation is set here.

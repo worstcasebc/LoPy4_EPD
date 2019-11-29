@@ -78,5 +78,4 @@ try:
 
 except KeyboardInterrupt:    
     print("ctrl + c:")
-    epd2in7.epdconfig.module_exit()
     exit()
