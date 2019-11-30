@@ -3,6 +3,7 @@ import pycom
 import config
 import adafruit_framebuf
 from machine import SPI
+import textwrap
 
 EPD_HEIGHT  = 176
 EPD_WIDTH   = 264
@@ -49,31 +50,28 @@ try:
         EPD_WIDTH = EPD_HEIGHT
         EPD_HEIGHT = tmp_width
 
-    fb.circle(int(EPD_WIDTH / 2.5), int(EPD_HEIGHT / 2.5), 50, 0)
-    fb.text('ABCDEFGHIJKLMNOP', 0, 0, 0)
-    fb.text('BCDEFGHIJKLMNOP', 0, 8, 0)
-    fb.text('CDEFGHIJKLMNOP', 0, 16, 0)
-    fb.text('DEFGHIJKLMNOP', 0, 24, 0)
-    fb.text('EFGHIJKLMNOP', 0, 32, 0)
-    fb.text('FGHIJKLMNOP', 0, 40, 0)
-    fb.text('GHIJKLMNOP', 0, 48, 0)
-    fb.text('HIJKLMNOP', 0, 56, 0)
-    fb.text('IJKLMNOP', 0, 64, 0)
-    fb.text('JKLMNOP', 0, 72, 0)
-    fb.text('KLMNOP', 0, 80, 0)
-    fb.text('LMNOP', 0, 88, 0)
+    # open file and read the text
+    textFile = open('sample_text.txt','r')
+    data=textFile.read()
+    textFile.close()
+
+    sElem = textwrap.wrap(data, 48, linebreak=True)
+
+    for i in range(48):
+        # the adafruit-frambuffer is not working for special chars (e.g. " ' ")
+        fb.text(sElem[i], 6, (i+1)*8, 0)
 
     if config.epd_type == "epd7in5bc_color":
-        fb_red.rect(10, 10, EPD_WIDTH - 20, EPD_HEIGHT - 20, 0)
-        fb_red.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
+        fb_red.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
+        #fb_red.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
         epd.display(fb.buf, fb_red.buf)
     elif config.epd_type == "epd7in5bc_bw":
-        fb.rect(10, 10, EPD_WIDTH - 20, EPD_HEIGHT - 20, 0)
-        fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
+        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
+        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
         epd.display(fb.buf, fb_red.buf)
     else:
-        fb.rect(10, 10, EPD_WIDTH - 20, EPD_HEIGHT - 20, 0)
-        fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
+        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
+        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
         epd.display(fb.buf)
 
 except KeyboardInterrupt:    
