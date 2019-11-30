@@ -59,6 +59,7 @@ try:
 
     for i in range(48):
         # the adafruit-frambuffer is not working for special chars (e.g. " ' ")
+        #print(sElem[i])
         fb.text(sElem[i], 6, (i+1)*8, 0)
 
     if config.epd_type == "epd7in5bc_color":
