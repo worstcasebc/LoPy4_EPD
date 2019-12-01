@@ -18,7 +18,7 @@ def wrap(data, columns, linebreak=True):
         if len(sPart) > 2:
             sElem.append(sPart)
 
-        if linebreak:
+        if linebreak and (not i == len(mBlock)):
             sElem.append('')
     
     return sElem

@@ -29,6 +29,10 @@ elif (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw
 else:
     print("Please set a display-type within config.py")
 
+# font size
+fWidth = 6
+fHeight = 8
+
 try:
     epd.init()
 
@@ -49,19 +53,32 @@ try:
         tmp_width = EPD_WIDTH
         EPD_WIDTH = EPD_HEIGHT
         EPD_HEIGHT = tmp_width
+    
+    # max num of lines and columns for the font of 6x8
+    tColMax = (EPD_WIDTH - (2 * fWidth)) // fWidth
+    tRowMax = (EPD_HEIGHT - (2 * fHeight)) // fHeight
+
+    print("Display-size: {} x {}".format(EPD_WIDTH, EPD_HEIGHT))
+    print("Num of Rows {} / Cols {}".format(tRowMax, tColMax))
 
     # open file and read the text
     textFile = open('sample_text.txt','r')
     data=textFile.read()
     textFile.close()
 
-    sElem = textwrap.wrap(data, 48, linebreak=True)
+    sElem = textwrap.wrap(data, tColMax, linebreak=True)
+    #print(len(sElem))
 
-    for i in range(48):
+    if (len(sElem) > tRowMax):
+        tRow = tRowMax
+    else:
+        tRow = len(sElem)
+
+    for i in range(tRow):
         # the adafruit-frambuffer is not working for special chars (e.g. " ' ")
-        #print(sElem[i])
-        fb.text(sElem[i], 6, (i+1)*8, 0)
-
+        #print("[{}]: {}".format(i, sElem[i]))
+        fb.text(sElem[i], fWidth, (i+1) * fHeight + 1, 0)
+        
     if config.epd_type == "epd7in5bc_color":
         fb_red.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
         #fb_red.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
