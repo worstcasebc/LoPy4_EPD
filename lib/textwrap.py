@@ -12,6 +12,8 @@ def wrap(data, columns, linebreak=True):
         sPart = str(mBlock[i])
         while (len(sPart) > columns):
             end = sPart.rfind(' ', 0, columns)
+            if end < 0:
+                end = columns
             sElem.append(sPart[0:end])
             sPart = sPart[end+1:len(sPart)]
 
