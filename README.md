@@ -23,7 +23,7 @@ First project using micropython on Pycom LoPy4 together with an EPD
 | P10  (G17)    | CLK           | SPI clock signal                      |
 
 ### Used libraries
-Adafruit framebuf and Waveshare Python-libs adapted for Micropython
+Adafruit framebuf and [Waveshare Python-libs](https://github.com/waveshare/e-Paper/tree/master/RaspberryPi%26JetsonNano/python) adapted for Micropython
 
 ### Code
 The Lopy4 board connects to a WiFi first. This happens in the boot.py, that is called first after a start/reboot. You need to provide a SSID and the key for that WiFi within config.py. After WiFi is connected, the actual time is requested and stored to the RTC of the board.

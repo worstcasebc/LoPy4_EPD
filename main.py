@@ -20,6 +20,12 @@ elif config.epd_type == "epd4in2":
     EPD_WIDTH       = 400
     EPD_HEIGHT      = 300
     epd = epd4in2.EPD()
+elif config.epd_type == "epd4in2bc":
+    # Setting for 4in2 display
+    from waveshare_epd import epd4in2bc
+    EPD_WIDTH       = 400
+    EPD_HEIGHT      = 300
+    epd = epd4in2bc.EPD()
 elif (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw"):
     # Setting for 7in5 display
     from waveshare_epd import epd7in5bc
@@ -42,7 +48,7 @@ try:
     fb = adafruit_framebuf.FrameBuffer(bab, EPD_WIDTH, EPD_HEIGHT, buf_format=adafruit_framebuf.MHMSB)
     fb.rotation = config.epd_rotation
 
-    if (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw"):
+    if (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw") or (config.epd_type == "epd4in2bc"):
         bay = bytearray(EPD_WIDTH * EPD_HEIGHT // 8)
         for i in range(len(bay)):
             bay[i] = 0xFF
@@ -77,7 +83,7 @@ try:
     for i in range(tRow):
         # the adafruit-frambuffer is not working for special chars (e.g. " ' ")
         #print("[{}]: {}".format(i, sElem[i]))
-        fb.text(sElem[i], fWidth, (i+1) * fHeight + 1, 0)
+        fb_red.text(sElem[i], fWidth, (i+1) * fHeight + 1, 0)
         
     if config.epd_type == "epd7in5bc_color":
         fb_red.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
@@ -87,10 +93,17 @@ try:
         fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
         #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
         epd.display(fb.buf, fb_red.buf)
+    elif config.epd_type == "epd4in2bc":
+        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
+        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
+        epd.display(fb.buf, fb_red.buf)
     else:
         fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
         #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
         epd.display(fb.buf)
+
+    time.sleep_ms(20000)
+    epd.sleep()
 
 except KeyboardInterrupt:    
     print("ctrl + c:")
