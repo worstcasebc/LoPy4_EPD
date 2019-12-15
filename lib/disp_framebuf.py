@@ -1,51 +1,6 @@
-# The MIT License (MIT)
-#
-# Copyright (c) 2018 Kattni Rembor for Adafruit Industries
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-"""
-`adafruit_framebuf`
-====================================================
-
-CircuitPython pure-python framebuf module, based on the micropython framebuf module.
-
-* Author(s): Kattni Rembor, Tony DiCola, original file created by Damien P. George
-
-Implementation Notes
---------------------
-
-**Hardware:**
-
-* `Adafruit SSD1306 OLED displays <https://www.adafruit.com/?q=ssd1306>`_
-
-**Software and Dependencies:**
-
-* Adafruit CircuitPython firmware for the supported boards:
-  https://github.com/adafruit/circuitpython/releases
-
-"""
-
-__version__ = "0.0.0-auto.0"
-__repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_framebuf.git"
-
 import os
 import struct
+import binascii
 
 # Framebuf format constants:
 MVLSB = 0  # Single bit displays (like SSD1306 OLED)
@@ -91,79 +46,15 @@ class MHMSBFormat:
                 framebuf.buf[index] = (framebuf.buf[index] & ~(0x01 << offset)) \
                                       | ((color != 0) << offset)
 
-class MVLSBFormat:
-    """MVLSBFormat"""
-    @staticmethod
-    def set_pixel(framebuf, x, y, color):
-        """Set a given pixel to a color."""
-        index = (y >> 3) * framebuf.stride + x
-        offset = y & 0x07
-        framebuf.buf[index] = (framebuf.buf[index] & ~(0x01 << offset)) | ((color != 0) << offset)
-
-    @staticmethod
-    def get_pixel(framebuf, x, y):
-        """Get the color of a given pixel"""
-        index = (y >> 3) * framebuf.stride + x
-        offset = y & 0x07
-        return (framebuf.buf[index] >> offset) & 0x01
-
-    @staticmethod
-    def fill(framebuf, color):
-        """completely fill/clear the buffer with a color"""
-        if color:
-            fill = 0xFF
-        else:
-            fill = 0x00
-        for i in range(len(framebuf.buf)):
-            framebuf.buf[i] = fill
-
-    @staticmethod
-    def fill_rect(framebuf, x, y, width, height, color):
-        """Draw a rectangle at the given location, size and color. The ``fill_rect`` method draws
-        both the outline and interior."""
-        # pylint: disable=too-many-arguments
-        while height > 0:
-            index = (y >> 3) * framebuf.stride + x
-            offset = y & 0x07
-            for w_w in range(width):
-                framebuf.buf[index + w_w] = (framebuf.buf[index + w_w] & ~(0x01 << offset)) |\
-                                           ((color != 0) << offset)
-            y += 1
-            height -= 1
-
 class FrameBuffer:
-    """FrameBuffer object.
-
-    :param buf: An object with a buffer protocol which must be large enough to contain every
-                pixel defined by the width, height and format of the FrameBuffer.
-    :param width: The width of the FrameBuffer in pixel
-    :param height: The height of the FrameBuffer in pixel
-    :param buf_format: Specifies the type of pixel used in the FrameBuffer; permissible values
-                        are listed under Constants below. These set the number of bits used to
-                        encode a color value and the layout of these bits in ``buf``. Where a
-                        color value c is passed to a method, c is  a small integer with an encoding
-                        that is dependent on the format of the FrameBuffer.
-    :param stride: The number of pixels between each horizontal line of pixels in the
-                   FrameBuffer. This defaults to ``width`` but may need adjustments when
-                   implementing a FrameBuffer within another larger FrameBuffer or screen. The
-                   ``buf`` size must accommodate an increased step size.
-
-    """
-    def __init__(self, buf, width, height, buf_format=MVLSB, stride=None):
+    def __init__(self, buf, width, height, buf_format=MHMSB):
         # pylint: disable=too-many-arguments
         self.buf = buf
         self.width = width
         self.height = height
-        self.stride = stride
         self._font = None
-        if self.stride is None:
-            self.stride = width
-        if buf_format == MVLSB:
-            self.format = MVLSBFormat()
-        elif buf_format == MHMSB:
-            self.format = MHMSBFormat()
-        else:
-            raise ValueError('invalid format')
+        self.stride = width
+        self.format = MHMSBFormat()
         self._rotation = 0
 
     @property
@@ -301,9 +192,9 @@ class FrameBuffer:
                 y += s_y
         self.pixel(x, y, color)
 
-    def blit(self):
+    def blit(self, width, height, map):
         """blit is not yet implemented"""
-        raise NotImplementedError()
+        raise NotImplementedError("This method is not yet implemented!")
 
     def scroll(self, delta_x, delta_y):
         """shifts framebuf in x and y direction"""
@@ -338,10 +229,11 @@ class FrameBuffer:
 
         Does not break on line going off screen.
         """
+        print("Text with font {}".format(font_name))
         for chunk in string.split('\n'):
             if not self._font or self._font.font_name != font_name:
                 # load the font!
-                self._font = BitmapFont()
+                self._font = BitmapFont(font_name)
             w = self._font.font_width
             for i, char in enumerate(chunk):
                 self._font.draw_char(char,
@@ -350,7 +242,51 @@ class FrameBuffer:
             y += self._font.font_height*size
     # pylint: enable=too-many-arguments
 
+    def printLine(self, string, x, y, fontName, color=0x00, size=1):
+        font = __import__(fontName)
 
+        charCount = 0
+        for char in string:
+            glyph, char_height, char_width = font.get_ch(char)
+            #print("{}->{} width: {}".format(char, binascii.hexlify(bytearray(glyph)), char_width))
+            self._printChar(glyph, x, y, char_height, char_width, color, size)
+            x = x + char_width
+    
+    def _printChar(self, glyph, x, y, char_height, char_width, color, size):
+        baChar = memoryview(glyph)
+        charLine = 0
+        mult1 = char_width // 8
+        mult2 = mult1
+
+        if (char_width % 8) > 0:
+            mult2 = mult1 + 1
+
+        a = char_width % 8
+        b = (8 - a)
+        arrayWidth = (8 * mult2) - b
+        
+        #print("x: {}, y:{}, mult1: {} - mult2: {} - a: {} - b: {} - aWidth: {}".format(x, y, mult1, mult2, a, b, arrayWidth))
+        for char_y in range(0,char_height*mult2, mult2):
+            for z in range(mult2):
+                #print("{} - {}-byte: {}".format(char_y+z, z, baChar[char_y+z]))
+                for char_x in range(8):
+                    # Draw a pixel for each bit that's flipped on.
+                    if (baChar[char_y+z] >> char_x) & 0x1:
+                        self.fill_rect(x +(z*8) + (8 - char_x), y + charLine, 1, 1, 0x00)
+            charLine += 1
+        
+        
+        
+        # for char_y in range(char_height):
+        #     for char_x in range(0,char_width):
+        #         if ((baChar[char_y] >> char_x + 1) & 0x1):
+        #             self.fill_rect(x + (char_width - char_x), y + char_y, 1, 1, color)
+
+                # TODO: check for fonts larger than 8px width or height
+                # if ((char_width < 8) and ((baChar[char_y] >> char_x + 1) & 0x1)):
+                #     self.fill_rect(x + (char_width - char_x), y + char_y, 1, 1, color)
+                # elif ((char_width == 8) and ((baChar[char_y] >> char_x) & 0x1)):
+                #     self.fill_rect(x + (char_width - char_x), y + char_y, 1, 1, color)
 
     def image(self, img):
         """Set buffer to value of Python Imaging Library image.  The image should
@@ -396,7 +332,9 @@ class BitmapFont:
         # Note that only fonts up to 8 pixels tall are currently supported.
         try:
             self._font = open(self.font_name, 'rb')
+            print("Font {} read ...".format(font_name))
             self.font_width, self.font_height = struct.unpack('BB', self._font.read(2))
+            print("Fontsize: {}x{}".format(self.font_width, self.font_height))
             # simple font file validation check based on expected file size
             if 2 + 256 * self.font_width != os.stat(font_name)[6]:
                 raise RuntimeError("Invalid font file: " + font_name)

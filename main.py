@@ -1,110 +1,120 @@
 import time
 import pycom
 import config
-import adafruit_framebuf
 from machine import SPI
 import textwrap
+import disp_framebuf
 
-EPD_HEIGHT  = 176
-EPD_WIDTH   = 264
+#epd_type = "epd2in7"
+#epd_type = "epd4in2"
+epd_type = "epd4in2bc"
+#epd_type = "epd7in5bc"
 
-if config.epd_type == "epd2in7":
+font_name = "fonts/palatino14"
+font = __import__(font_name)
+
+rotation = 1
+
+if epd_type == "epd2in7":
     # Setting for 2in7 display
-    from waveshare_epd import epd2in7
-    EPD_WIDTH       = 176
-    EPD_HEIGHT      = 264
+    from worstcase_epd import epd2in7
     epd = epd2in7.EPD()
-elif config.epd_type == "epd4in2":
+    buf = bytearray((epd.width // 8) * epd.height)
+    for i in range (len(buf)):
+        buf[i] = 0xFF
+    fb = disp_framebuf.FrameBuffer(buf, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fb.rotation = rotation
+    
+elif epd_type == "epd4in2":
     # Setting for 4in2 display
-    from waveshare_epd import epd4in2
-    EPD_WIDTH       = 400
-    EPD_HEIGHT      = 300
+    from worstcase_epd import epd4in2
     epd = epd4in2.EPD()
-elif config.epd_type == "epd4in2bc":
+    buf = bytearray((epd.width // 8) * epd.height)
+    for i in range (len(buf)):
+        buf[i] = 0xFF
+    fb = disp_framebuf.FrameBuffer(buf, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fb.rotation = rotation
+    
+elif (epd_type == "epd4in2bc"):
     # Setting for 4in2 display
-    from waveshare_epd import epd4in2bc
-    EPD_WIDTH       = 400
-    EPD_HEIGHT      = 300
+    from worstcase_epd import epd4in2bc
     epd = epd4in2bc.EPD()
-elif (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw"):
+    buf = bytearray((epd.width // 8) * epd.height)
+    bufc = bytearray((epd.width // 8) * epd.height)
+    for i in range (len(buf)):
+        buf[i] = 0xFF
+        bufc[i] = 0xFF
+    fb = disp_framebuf.FrameBuffer(buf, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fbc = disp_framebuf.FrameBuffer(bufc, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fb.rotation = rotation
+    fbc.rotation = rotation
+
+elif (epd_type == "epd7in5bc"):
     # Setting for 7in5 display
-    from waveshare_epd import epd7in5bc
-    EPD_WIDTH       = 640
-    EPD_HEIGHT      = 384
+    from worstcase_epd import epd7in5bc
     epd = epd7in5bc.EPD()
+    buf = bytearray((epd.width // 8) * epd.height)
+    bufc = bytearray((epd.width // 8) * epd.height)
+    for i in range (len(buf)):
+        buf[i] = 0xFF
+        bufc[i] = 0xFF
+    fb = disp_framebuf.FrameBuffer(buf, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fbc = disp_framebuf.FrameBuffer(bufc, epd.width, epd.height, buf_format=disp_framebuf.MHMSB)
+    fb.rotation = rotation
+    fbc.rotation = rotation
+    
 else:
-    print("Please set a display-type within config.py")
+    print("Please set a display-type")
 
 # font size
-fWidth = 6
-fHeight = 8
+fWidth = font.max_width() 
+fHeight = font.height()
+tRow = 0
 
 try:
     epd.init()
-
-    bab = bytearray(EPD_WIDTH * EPD_HEIGHT // 8)
-    for i in range(len(bab)):
-        bab[i] = 0xFF
-    fb = adafruit_framebuf.FrameBuffer(bab, EPD_WIDTH, EPD_HEIGHT, buf_format=adafruit_framebuf.MHMSB)
-    fb.rotation = config.epd_rotation
-
-    if (config.epd_type == "epd7in5bc_color") or (config.epd_type == "epd7in5bc_bw") or (config.epd_type == "epd4in2bc"):
-        bay = bytearray(EPD_WIDTH * EPD_HEIGHT // 8)
-        for i in range(len(bay)):
-            bay[i] = 0xFF
-        fb_red = adafruit_framebuf.FrameBuffer(bay, EPD_WIDTH, EPD_HEIGHT, buf_format=adafruit_framebuf.MHMSB)
-        fb_red.rotation = config.epd_rotation
-
-    if config.epd_rotation in (1, 3):
-        tmp_width = EPD_WIDTH
-        EPD_WIDTH = EPD_HEIGHT
-        EPD_HEIGHT = tmp_width
     
-    # max num of lines and columns for the font of 6x8
-    tColMax = (EPD_WIDTH - (2 * fWidth)) // fWidth
-    tRowMax = (EPD_HEIGHT - (2 * fHeight)) // fHeight
-
-    print("Display-size: {} x {}".format(EPD_WIDTH, EPD_HEIGHT))
-    print("Num of Rows {} / Cols {}".format(tRowMax, tColMax))
-
+    if rotation in (1, 3):
+        screenWidth = epd.height
+        screenHeight = epd.width
+    else:
+        screenWidth = epd.width
+        screenHeight = epd.height
+    
     # open file and read the text
+    print("read text")
     textFile = open('sample_text.txt','r')
     data=textFile.read()
     textFile.close()
 
-    sElem = textwrap.wrap(data, tColMax, linebreak=True)
-    #print(len(sElem))
+    tMaxRow = (screenHeight - (2 * fHeight)) // fHeight
 
-    if (len(sElem) > tRowMax):
-        tRow = tRowMax
-    else:
-        tRow = len(sElem)
+    widthArray = font.getWidthArray()
+    print("wrap text")
+    sElem = textwrap.wrapWidth(data, screenWidth - (2 * fWidth), widthArray, tMaxRow, linebreak=True)
 
+    tRow = tMaxRow if (len(sElem) > tMaxRow) else len(sElem)
+
+    print("fill framebuffer")
     for i in range(tRow):
-        # the adafruit-frambuffer is not working for special chars (e.g. " ' ")
-        #print("[{}]: {}".format(i, sElem[i]))
-        fb_red.text(sElem[i], fWidth, (i+1) * fHeight + 1, 0)
-        
-    if config.epd_type == "epd7in5bc_color":
-        fb_red.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
-        #fb_red.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
-        epd.display(fb.buf, fb_red.buf)
-    elif config.epd_type == "epd7in5bc_bw":
-        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
-        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
-        epd.display(fb.buf, fb_red.buf)
-    elif config.epd_type == "epd4in2bc":
-        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
-        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
-        epd.display(fb.buf, fb_red.buf)
-    else:
-        fb.rect(2, 2, EPD_WIDTH - 4, EPD_HEIGHT - 4, 0)
-        #fb.fill_rect(EPD_WIDTH // 2, EPD_HEIGHT // 2, 60, 60, 0)
-        epd.display(fb.buf)
+        fb.printLine(sElem[i], fWidth + 1, ((i + 1) * fHeight), font_name, color=0x00, size=1)
 
-    time.sleep_ms(20000)
+    if(epd_type == "epd7in5bc") or (epd_type == "epd4in2bc"):
+        fbc.line(10,10,screenWidth-10,screenHeight-10,0x00)
+        fbc.line(10,screenHeight-10,screenWidth-10,10,0x00)
+    else:
+        fb.line(10,10,screenWidth-10,screenHeight-10,0x00)
+        fb.line(10,screenHeight-10,screenWidth-10,10,0x00)
+    
+    print("display framebuffer")
+    if(epd_type == "epd7in5bc") or (epd_type == "epd4in2bc"):
+        epd.display(fb.buf, fbc.buf)
+        time.sleep_ms(10000)
+    else:
+        epd.display(fb.buf)
+        time.sleep_ms(5000)
+    
     epd.sleep()
 
-except KeyboardInterrupt:    
-    print("ctrl + c:")
-    exit()
+except Exception as e:    
+    print("Error: {}".format(e))

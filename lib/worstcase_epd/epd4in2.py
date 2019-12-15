@@ -3,6 +3,7 @@ import time
 import config
 from machine import Pin, SPI
 import uos
+import disp_framebuf
 
 spi = SPI(0, mode=SPI.MASTER, baudrate=2000000, polarity=0, phase=0)
 
@@ -11,7 +12,7 @@ GRAY2  = 0xC0
 GRAY3  = 0x80 #gray
 GRAY4  = 0x00 #Blackest
 
-class EPD:
+class EPD():
     def __init__(self):
         self.reset_pin = Pin(config.RST_PIN, mode=Pin.OUT)
         self.dc_pin = Pin(config.DC_PIN, mode=Pin.OUT)
@@ -327,14 +328,14 @@ class EPD:
         
         return buf
 
-    def display(self, image):
+    def display(self, buf):
         self.send_command(0x10)
         for i in range(0, int(self.width * self.height / 8)):
             self.send_data(0xFF)
             
         self.send_command(0x13)
         for i in range(0, int(self.width * self.height / 8)):
-            self.send_data(image[i])
+            self.send_data(buf[i])
             
         self.send_command(0x12) 
         self.ReadBusy()
